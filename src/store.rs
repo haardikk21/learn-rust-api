@@ -6,6 +6,11 @@ use std::sync::Arc;
 type Items = HashMap<String, i32>;
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct Id {
+  pub name: String,
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct Item {
   pub name: String,
   pub quantity: i32,
