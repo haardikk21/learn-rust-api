@@ -1,9 +1,34 @@
 use warp::Filter;
 
+mod routes;
+mod store;
+
+fn json_body() -> impl Filter<Extract = (store::Item,), Error = warp::Rejection> + Clone {
+    // We want a JSON body and want to reject huge payloads
+    warp::body::content_length_limit(1024 * 16).and(warp::body::json())
+}
+
 #[tokio::main]
 async fn main() {
-    // GET /hello/<name> => 200 OK with body "Hello, <name>!"
-    let hello = warp::path!("hello" / String).map(|name| format!("Hello, {}!", name));
+    let store = store::Store::new();
+    let store_filter = warp::any().map(move || store.clone());
 
-    warp::serve(hello).run(([127, 0, 0, 1], 3030)).await;
+    let add_items = warp::post()
+        .and(warp::path("v1"))
+        .and(warp::path("groceries"))
+        .and(warp::path::end())
+        .and(json_body())
+        .and(store_filter.clone())
+        .and_then(routes::add_grocery_list_item);
+
+    let get_items = warp::get()
+        .and(warp::path("v1"))
+        .and(warp::path("groceries"))
+        .and(warp::path::end())
+        .and(store_filter.clone())
+        .and_then(routes::get_grocery_list);
+
+    let routes = add_items.or(get_items);
+
+    warp::serve(routes).run(([127, 0, 0, 1], 3030)).await;
 }
